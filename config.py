@@ -84,7 +84,7 @@ def has_rename_config(config):
         return False
     provider = config.get("general", "provider")
     # Check env var
-    from modules.rename import ENV_KEYS
+    from modules.api import ENV_KEYS
     env_var = ENV_KEYS.get(provider)
     if env_var and os.environ.get(env_var):
         return True
