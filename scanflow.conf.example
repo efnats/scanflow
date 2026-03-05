@@ -1,0 +1,27 @@
+[general]
+# AI provider for rename: claude or openai
+provider = claude
+# model (optional, default per provider)
+# model = claude-sonnet-4-20250514
+# model = gpt-4o
+
+[claude]
+# API key here or set ANTHROPIC_API_KEY env variable
+# Env variable takes precedence over config
+api_key = sk-ant-...
+
+[openai]
+# API key here or set OPENAI_API_KEY env variable
+# Env variable takes precedence over config
+api_key = sk-...
+
+# One [watch:name] section per directory set to monitor
+[watch:user1]
+single_dir = /scans/user1/single
+multi_dir = /scans/user1/multi
+output_dir = /scans/user1/output
+
+# [watch:user2]
+# single_dir = /scans/user2/single
+# multi_dir = /scans/user2/multi
+# output_dir = /scans/user2/output
