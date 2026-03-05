@@ -17,7 +17,7 @@ Modular PDF processing pipeline for scanned documents. Watches directories for i
 - Python packages: `requests`, `pymupdf`
 
 ```bash
-apt install ocrmypdf pdftk inotify-tools tesseract-ocr-deu
+apt install ocrmypdf pdftk inotify-tools tesseract-ocr-deu python3-pip
 pip install -r requirements.txt
 ```
 
