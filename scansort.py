@@ -370,7 +370,8 @@ def main():
                 time.sleep(batch_delay - elapsed)
         last_api_call = time.monotonic()
         success, rate_limited = process_single_pdf(
-            pdf, args.target, folders, config, args.dry_run, args.yes, i + 1, len(pdfs)
+            pdf, args.target, folders, config, args.dry_run, args.yes,
+            index=i + 1, total=len(pdfs)
         )
         if not success:
             errors += 1
