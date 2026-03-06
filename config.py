@@ -54,13 +54,13 @@ def get_watch_sections(config):
             single_dir = config.get(section, "single_dir", fallback=None)
             multi_dir = config.get(section, "multi_dir", fallback=None)
             output_dir = config.get(section, "output_dir", fallback=None)
-            if not all([single_dir, multi_dir, output_dir]):
+            if not all([single_dir, output_dir]):
                 print(f"Warning: Incomplete watch config [{section}], skipping", file=sys.stderr)
                 continue
             watches.append({
                 "name": name,
                 "single_dir": single_dir.rstrip("/"),
-                "multi_dir": multi_dir.rstrip("/"),
+                "multi_dir": multi_dir.rstrip("/") if multi_dir else None,
                 "output_dir": output_dir.rstrip("/"),
             })
     return watches

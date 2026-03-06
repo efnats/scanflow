@@ -1,4 +1,4 @@
-"""Subcommand: watch directories for scanned PDFs, process with OCR and optional AI rename."""
+"""Subcommand: watch directories for scanned PDFs and process them."""
 
 import glob
 import os
@@ -102,10 +102,13 @@ def process_multi(odd_file, even_file, output_dir, config, do_rename, watcher_na
 
 # --- Watchers ---
 
-def validate_dirs(watch):
+def validate_dirs(watch, steps):
     """Check that all configured directories exist."""
     missing = []
-    for key in ("single_dir", "multi_dir", "output_dir"):
+    required = ["single_dir", "output_dir"]
+    if "multipage" in steps:
+        required.append("multi_dir")
+    for key in required:
         d = watch[key]
         if not os.path.isdir(d):
             missing.append(f"{key}={d}")
@@ -174,21 +177,23 @@ def watch_orphans(watch_dir, timeout, watcher_name):
 
 # --- Startup ---
 
-def start_watchers(watches, config, do_rename):
+def start_watchers(watches, config, steps):
     """Start watcher threads for all configured directory sets."""
+    do_rename = "rename" in steps
+    do_multipage = "multipage" in steps
     threads = []
     for w in watches:
         name = w["name"]
 
-        missing = validate_dirs(w)
+        missing = validate_dirs(w, steps)
         if missing:
             log_err(f"[{name}] Directories not found: {', '.join(missing)}")
             log_err(f"[{name}] Skipping this watch set")
             continue
 
-        lock = threading.Lock()
         log(f"[{name}] single={w['single_dir']}")
-        log(f"[{name}] multi={w['multi_dir']}")
+        if do_multipage:
+            log(f"[{name}] multi={w['multi_dir']}")
         log(f"[{name}] output={w['output_dir']}")
 
         t1 = threading.Thread(
@@ -197,22 +202,26 @@ def start_watchers(watches, config, do_rename):
             name=f"{name}-single",
             daemon=True,
         )
-        t2 = threading.Thread(
-            target=watch_multi,
-            args=(w["multi_dir"], w["output_dir"], config, do_rename, lock, f"{name}/multi"),
-            name=f"{name}-multi",
-            daemon=True,
-        )
-        t3 = threading.Thread(
-            target=watch_orphans,
-            args=(w["multi_dir"], MULTI_TIMEOUT, f"{name}/orphan"),
-            name=f"{name}-orphans",
-            daemon=True,
-        )
         t1.start()
-        t2.start()
-        t3.start()
-        threads.extend([t1, t2, t3])
+        threads.append(t1)
+
+        if do_multipage:
+            lock = threading.Lock()
+            t2 = threading.Thread(
+                target=watch_multi,
+                args=(w["multi_dir"], w["output_dir"], config, do_rename, lock, f"{name}/multi"),
+                name=f"{name}-multi",
+                daemon=True,
+            )
+            t3 = threading.Thread(
+                target=watch_orphans,
+                args=(w["multi_dir"], MULTI_TIMEOUT, f"{name}/orphan"),
+                name=f"{name}-orphans",
+                daemon=True,
+            )
+            t2.start()
+            t3.start()
+            threads.extend([t2, t3])
 
     return threads
 
@@ -228,8 +237,10 @@ def setup_parser(subparsers):
     p = subparsers.add_parser("watch", help="Watch directories for scanned PDFs and process them")
     p.add_argument("--config", default=None,
                     help="Path to config file")
-    p.add_argument("--no-rename", action="store_true",
-                    help="Disable AI rename even if configured")
+    p.add_argument("--rename", action="store_true",
+                    help="Enable AI rename after OCR")
+    p.add_argument("--no-multipage", action="store_true",
+                    help="Disable duplex/multipage watcher")
     p.set_defaults(func=main)
 
 
@@ -238,22 +249,31 @@ def main(args):
     print("scanflow watch starting...")
     print()
 
+    steps = {"ocr"}
+    if not args.no_multipage:
+        steps.add("multipage")
+    if args.rename:
+        steps.add("rename")
+
     check_dependencies()
     config = load_config(args.config)
+
+    if "rename" in steps and not has_rename_config(config):
+        print("Error: --rename requires AI provider config (provider + API key)", file=sys.stderr)
+        sys.exit(1)
 
     watches = get_watch_sections(config)
     if not watches:
         print("Error: No [watch:*] sections found in config", file=sys.stderr)
         sys.exit(1)
 
-    do_rename = not args.no_rename and has_rename_config(config)
-    log(f"AI rename: {'enabled' if do_rename else 'disabled'}")
+    log(f"Steps: {', '.join(sorted(steps))}")
     log(f"Directory sets: {len(watches)}")
     print()
 
     cleanup_temp()
 
-    threads = start_watchers(watches, config, do_rename)
+    threads = start_watchers(watches, config, steps)
 
     if not threads:
         log_err("No watchers started (all directory sets had errors)")
