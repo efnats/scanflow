@@ -51,12 +51,9 @@ def sanitize_filename(name, original_path=None):
         m = re.match(r"^(\d{8})", orig)
         if m:
             name = m.group(1) + name[8:]
-    # Skip if nothing meaningful was identified (same date, no description)
-    if original_path:
-        orig = os.path.splitext(os.path.basename(original_path))[0]
-        orig_date = re.match(r"^(\d{8})", orig)
-        if orig_date and name == orig_date.group(1):
-            return None
+    # Skip if only a date without description (not a meaningful rename)
+    if re.match(r"^\d{8}$", name):
+        return None
     return name
 
 
