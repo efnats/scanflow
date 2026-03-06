@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
-"""Standalone CLI: rename PDFs based on AI content analysis."""
+"""Subcommand: rename PDFs based on AI content analysis."""
 
-import argparse
 import os
 import sys
 import time
@@ -12,7 +10,6 @@ from config import load_config
 from modules.rename import (
     analyze_pdf,
     is_already_renamed,
-    rename_pdf,
     resolve_target,
     sanitize_filename,
     write_keywords,
@@ -117,24 +114,27 @@ def process_single_pdf(pdf_path, config, dry_run, auto_yes, tag_only=False, inde
     return True, False
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Rename PDFs based on AI content analysis")
-    parser.add_argument("path", help="Path to a PDF file or directory containing PDFs")
-    parser.add_argument("--config", default=None,
-                        help="Path to config file (default: /etc/scanflow.conf, "
-                             "~/.config/scanflow/scanflow.conf, ./scanflow.conf)")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Only print suggested name, do not rename")
-    parser.add_argument("--force", action="store_true",
-                        help="Re-process files that were already renamed")
-    parser.add_argument("-r", "--recursive", action="store_true",
-                        help="Process subdirectories recursively")
-    parser.add_argument("-y", "--yes", action="store_true",
-                        help="Skip confirmation prompt, rename automatically")
-    parser.add_argument("--tag-only", action="store_true",
-                        help="Only write AI keywords to PDF metadata, do not rename")
-    args = parser.parse_args()
+def setup_parser(subparsers):
+    """Register the 'rename' subcommand."""
+    p = subparsers.add_parser("rename", help="Rename PDFs based on AI content analysis")
+    p.add_argument("path", help="Path to a PDF file or directory containing PDFs")
+    p.add_argument("--config", default=None,
+                    help="Path to config file")
+    p.add_argument("--dry-run", action="store_true",
+                    help="Only print suggested name, do not rename")
+    p.add_argument("--force", action="store_true",
+                    help="Re-process files that were already renamed")
+    p.add_argument("-r", "--recursive", action="store_true",
+                    help="Process subdirectories recursively")
+    p.add_argument("-y", "--yes", action="store_true",
+                    help="Skip confirmation prompt, rename automatically")
+    p.add_argument("--tag-only", action="store_true",
+                    help="Only write AI keywords to PDF metadata, do not rename")
+    p.set_defaults(func=main)
 
+
+def main(args):
+    """Run the rename command."""
     if not os.path.exists(args.path):
         print(f"Error: Path not found: {args.path}", file=sys.stderr)
         sys.exit(1)
@@ -147,7 +147,7 @@ def main():
 
     # Clear screen and show header
     print("\033[2J\033[H", end="")
-    print(f"{C_BOLD}scanrename{C_RESET} — AI-powered PDF renaming")
+    print(f"{C_BOLD}scanflow rename{C_RESET} — AI-powered PDF renaming")
     print()
 
     pdfs = collect_pdfs(args.path, args.recursive)
@@ -192,11 +192,3 @@ def main():
     if errors:
         print(f"\n{C_RED}{errors} file(s) with errors.{C_RESET}", file=sys.stderr)
         sys.exit(1)
-
-
-if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print(f"\n\n{C_YELLOW}Aborted.{C_RESET}")
-        sys.exit(130)

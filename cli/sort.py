@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
-"""Standalone CLI: sort PDFs into matching directories based on AI analysis."""
+"""Subcommand: sort PDFs into matching directories based on AI analysis."""
 
-import argparse
 import itertools
 import os
 import sys
@@ -294,21 +292,24 @@ def process_single_pdf(pdf_path, base_dir, folders, config, dry_run, auto_yes, i
     return True, False
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Sort PDFs into directories based on AI analysis")
-    parser.add_argument("source", help="PDF file or directory containing PDFs to sort")
-    parser.add_argument("target", help="Target directory tree to sort into")
-    parser.add_argument("--config", default=None,
-                        help="Path to config file (default: /etc/scanflow.conf, "
-                             "~/.config/scanflow/scanflow.conf, ./scanflow.conf)")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Only show suggestions, do not move files")
-    parser.add_argument("-r", "--recursive", action="store_true",
-                        help="Search source subdirectories recursively")
-    parser.add_argument("-y", "--yes", action="store_true",
-                        help="Skip confirmation prompt, move automatically")
-    args = parser.parse_args()
+def setup_parser(subparsers):
+    """Register the 'sort' subcommand."""
+    p = subparsers.add_parser("sort", help="Sort PDFs into directories based on AI analysis")
+    p.add_argument("source", help="PDF file or directory containing PDFs to sort")
+    p.add_argument("target", help="Target directory tree to sort into")
+    p.add_argument("--config", default=None,
+                    help="Path to config file")
+    p.add_argument("--dry-run", action="store_true",
+                    help="Only show suggestions, do not move files")
+    p.add_argument("-r", "--recursive", action="store_true",
+                    help="Search source subdirectories recursively")
+    p.add_argument("-y", "--yes", action="store_true",
+                    help="Skip confirmation prompt, move automatically")
+    p.set_defaults(func=main)
 
+
+def main(args):
+    """Run the sort command."""
     if not os.path.exists(args.source):
         print(f"Error: Source not found: {args.source}", file=sys.stderr)
         sys.exit(1)
@@ -325,7 +326,7 @@ def main():
 
     # Clear screen and show header
     print("\033[2J\033[H", end="")
-    print("\033[1m📂 scansort\033[0m — AI-powered PDF sorting")
+    print("\033[1mscanflow sort\033[0m — AI-powered PDF sorting")
     print()
 
     # Scan target directory tree with spinner
@@ -381,11 +382,3 @@ def main():
     if errors:
         print(f"\n{errors} file(s) with errors.", file=sys.stderr)
         sys.exit(1)
-
-
-if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("\n\nAborted.")
-        sys.exit(130)

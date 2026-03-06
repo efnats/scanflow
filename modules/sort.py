@@ -4,9 +4,8 @@ import os
 import shutil
 import sys
 
-import fitz  # pymupdf
-
 from modules.api import ask_ai
+from modules.text import extract_text
 
 MAX_TEXT_CHARS = 2000
 
@@ -43,25 +42,6 @@ CREATE_PROMPT_TEMPLATE = (
     "\n\nUeberordner: {parent}"
     "\n\nBestehende Unterordner:\n{existing}"
 )
-
-
-def extract_pdf_text(pdf_path):
-    """Extract text from the first pages of a PDF, truncated to MAX_TEXT_CHARS.
-
-    Returns (text, keywords) where keywords is from PDF metadata (may be empty).
-    """
-    try:
-        doc = fitz.open(pdf_path)
-        keywords = (doc.metadata or {}).get("keywords", "") or ""
-        text = ""
-        for page in doc:
-            text += page.get_text()
-            if len(text) >= MAX_TEXT_CHARS:
-                break
-        doc.close()
-        return text[:MAX_TEXT_CHARS].strip(), keywords.strip()
-    except Exception:
-        return "", ""
 
 
 def scan_directory_tree(base_dir):
@@ -196,7 +176,7 @@ def sort_pdf(pdf_path, base_dir, folders, config):
     Raises on API errors (caller handles). Returns (None, None, [], text) if no match.
     """
     filename = os.path.basename(pdf_path)
-    text, keywords = extract_pdf_text(pdf_path)
+    text, keywords = extract_text(pdf_path, max_chars=MAX_TEXT_CHARS)
 
     if len(folders) <= MAX_FOLDERS_DIRECT:
         search_folders = folders

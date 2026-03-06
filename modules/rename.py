@@ -7,6 +7,7 @@ import sys
 import fitz  # pymupdf
 
 from modules.api import ask_ai, ENV_KEYS
+from modules.text import extract_text
 
 
 PROMPT_TEMPLATE = (
@@ -25,24 +26,12 @@ PROMPT_TEMPLATE = (
 )
 
 
-def extract_text(pdf_path):
-    """Extract the text layer from a PDF via pymupdf."""
-    doc = fitz.open(pdf_path)
-    text = ""
-    for page in doc:
-        text += page.get_text()
-    doc.close()
-    if not text.strip():
-        raise ValueError("No text found in PDF (OCR layer present?)")
-    return text.strip()
-
-
 def analyze_pdf(pdf_path, config):
     """Extract text from the PDF and ask the AI for a filename and keywords.
 
     Returns (suggested_name, keywords_string). Keywords may be empty.
     """
-    text = extract_text(pdf_path)
+    text, _ = extract_text(pdf_path)
     response = ask_ai(PROMPT_TEMPLATE.format(text=text), config)
     lines = response.strip().splitlines()
     suggested_name = lines[0].strip()
