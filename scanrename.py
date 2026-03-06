@@ -49,7 +49,7 @@ def confirm_rename(old_name, new_name):
     return answer in ("", "y", "yes", "j", "ja")
 
 
-def process_single_pdf(pdf_path, config, dry_run, auto_yes, index=0, total=0):
+def process_single_pdf(pdf_path, config, dry_run, auto_yes, tag_only=False, index=0, total=0):
     """Process a single PDF file. Returns (success, rate_limited) tuple."""
     progress = f"[{index}/{total}]" if total else ""
     old_name = os.path.basename(pdf_path)
@@ -66,6 +66,11 @@ def process_single_pdf(pdf_path, config, dry_run, auto_yes, index=0, total=0):
         return False, False
 
     write_keywords(pdf_path, keywords)
+
+    if tag_only:
+        kw_display = keywords if keywords else "(none)"
+        print(f"\n{progress} {old_name}\n  Keywords: {kw_display}")
+        return True, False
 
     if name is None:
         print(f"\n{progress} {old_name}\n  Skipped (no meaningful name found)")
@@ -107,6 +112,8 @@ def main():
                         help="Process subdirectories recursively")
     parser.add_argument("-y", "--yes", action="store_true",
                         help="Skip confirmation prompt, rename automatically")
+    parser.add_argument("--tag-only", action="store_true",
+                        help="Only write AI keywords to PDF metadata, do not rename")
     args = parser.parse_args()
 
     if not os.path.exists(args.path):
@@ -145,7 +152,10 @@ def main():
             if last_api_call and elapsed < batch_delay:
                 time.sleep(batch_delay - elapsed)
         last_api_call = time.monotonic()
-        success, rate_limited = process_single_pdf(pdf, config, args.dry_run, args.yes, i + 1, len(pdfs))
+        success, rate_limited = process_single_pdf(
+            pdf, config, args.dry_run, args.yes,
+            tag_only=args.tag_only, index=i + 1, total=len(pdfs)
+        )
         if not success:
             errors += 1
         if rate_limited:
