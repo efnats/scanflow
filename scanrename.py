@@ -66,10 +66,10 @@ def process_single_pdf(pdf_path, config, dry_run, auto_yes, tag_only=False, inde
         return False, False
 
     write_keywords(pdf_path, keywords)
+    kw_display = f"  Tags: {keywords}" if keywords else ""
 
     if tag_only:
-        kw_display = keywords if keywords else "(none)"
-        print(f"\n{progress} {old_name}\n  Keywords: {kw_display}")
+        print(f"\n{progress} {old_name}\n  Tags: {keywords if keywords else '(none)'}")
         return True, False
 
     if name is None:
@@ -79,14 +79,14 @@ def process_single_pdf(pdf_path, config, dry_run, auto_yes, tag_only=False, inde
     new_name = f"{name}.pdf"
 
     if dry_run:
-        print(f"\n{progress} {old_name}\n  -> {new_name}")
+        print(f"\n{progress} {old_name}\n  -> {new_name}{kw_display}")
         return True, False
 
     directory = os.path.dirname(os.path.abspath(pdf_path))
     target = resolve_target(directory, name)
     new_name = os.path.basename(target)
 
-    print(f"\n{progress} {old_name}\n  -> {new_name}")
+    print(f"\n{progress} {old_name}\n  -> {new_name}{kw_display}")
 
     if not auto_yes and not confirm_rename(old_name, new_name):
         print("  Skipped.")
