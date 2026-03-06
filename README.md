@@ -16,6 +16,7 @@ Modular PDF processing pipeline for scanned documents. Watches directories for i
 - `ocrmypdf`, `pdftk`, `inotify-tools`, `tesseract-ocr-deu`
 ```bash
 apt install ocrmypdf pdftk inotify-tools tesseract-ocr-deu python3-requests python3-fitz
+pip3 install simple-term-menu
 ```
 
 ## Project Structure
@@ -24,11 +25,14 @@ apt install ocrmypdf pdftk inotify-tools tesseract-ocr-deu python3-requests pyth
 scanflow/
 ├── scanflow              # Main watcher service
 ├── scanrename.py         # Standalone CLI for AI rename
+├── scansort.py           # Standalone CLI for AI folder sorting
 ├── config.py             # Shared configuration loading
 ├── modules/
+│   ├── api.py            # Shared AI API logic (Claude/OpenAI)
 │   ├── ocr.py            # OCR via ocrmypdf
 │   ├── multipage.py      # Duplex page interleaving via pdftk
-│   └── rename.py         # AI-based rename logic
+│   ├── rename.py         # AI-based rename logic
+│   └── sort.py           # AI-based folder sorting logic
 ├── scanflow.conf.example # Example configuration
 └── requirements.txt
 ```

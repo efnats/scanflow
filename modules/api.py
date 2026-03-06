@@ -81,7 +81,7 @@ def _call_claude(prompt, config):
         },
         json={
             "model": model,
-            "max_tokens": 200,
+            "max_tokens": 1024,
             "messages": [
                 {"role": "user", "content": prompt}
             ],
@@ -108,7 +108,7 @@ def _call_openai(prompt, config):
         },
         json={
             "model": model,
-            "max_tokens": 200,
+            "max_tokens": 1024,
             "messages": [
                 {"role": "user", "content": prompt}
             ],

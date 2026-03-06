@@ -15,6 +15,7 @@ from modules.rename import (
     rename_pdf,
     resolve_target,
     sanitize_filename,
+    write_keywords,
 )
 
 INITIAL_BATCH_DELAY = 2  # seconds between files in auto mode
@@ -54,7 +55,7 @@ def process_single_pdf(pdf_path, config, dry_run, auto_yes, index=0, total=0):
     old_name = os.path.basename(pdf_path)
 
     try:
-        suggested = analyze_pdf(pdf_path, config)
+        suggested, keywords = analyze_pdf(pdf_path, config)
         name = sanitize_filename(suggested, pdf_path)
     except requests.exceptions.HTTPError as e:
         rate_limited = e.response is not None and e.response.status_code == 429
@@ -63,6 +64,8 @@ def process_single_pdf(pdf_path, config, dry_run, auto_yes, index=0, total=0):
     except Exception as e:
         print(f"\n{progress} {old_name}\n  ERROR: {e}", file=sys.stderr)
         return False, False
+
+    write_keywords(pdf_path, keywords)
 
     if name is None:
         print(f"\n{progress} {old_name}\n  Skipped (no meaningful name found)")
