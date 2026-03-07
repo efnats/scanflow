@@ -6,7 +6,7 @@ import sys
 
 import fitz  # pymupdf
 
-from modules.api import ask_ai, ENV_KEYS
+from modules.api import ask_ai
 from modules.text import extract_text
 
 

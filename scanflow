@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Scanflow: PDF processing toolkit — watch, ocr, rename, sort."""
+"""Scanflow: PDF processing toolkit - watch, ocr, rename, sort."""
 
 import argparse
 import sys
@@ -10,7 +10,7 @@ from cli import watch, ocr, rename, sort
 def main():
     parser = argparse.ArgumentParser(
         prog="scanflow",
-        description="scanflow — PDF processing toolkit",
+        description="scanflow - PDF processing toolkit",
     )
     subparsers = parser.add_subparsers(dest="command")
 

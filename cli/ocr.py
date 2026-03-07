@@ -4,32 +4,8 @@ import os
 import sys
 import time
 
-from modules.ocr import ocr_if_needed, _has_text
-
-C_BOLD = "\033[1m"
-C_DIM = "\033[90m"
-C_GREEN = "\033[32m"
-C_YELLOW = "\033[33m"
-C_RED = "\033[31m"
-C_RESET = "\033[0m"
-
-
-def collect_pdfs(path, recursive):
-    """Collect PDF files from a path (file or directory)."""
-    if not os.path.isdir(path):
-        return [path]
-    if recursive:
-        pdfs = []
-        for root, _dirs, files in os.walk(path):
-            for f in sorted(files):
-                if f.lower().endswith(".pdf"):
-                    pdfs.append(os.path.join(root, f))
-        return sorted(pdfs)
-    return sorted(
-        os.path.join(path, f)
-        for f in os.listdir(path)
-        if f.lower().endswith(".pdf")
-    )
+from cli.common import collect_pdfs, C_BOLD, C_DIM, C_GREEN, C_RED, C_RESET
+from modules.ocr import ocr_if_needed, has_text
 
 
 def setup_parser(subparsers):
@@ -51,7 +27,7 @@ def main(args):
         print(f"Error: Path not found: {args.path}", file=sys.stderr)
         sys.exit(1)
 
-    print(f"{C_BOLD}scanflow ocr{C_RESET} — OCR for PDFs without text layer")
+    print(f"{C_BOLD}scanflow ocr{C_RESET} - OCR for PDFs without text layer")
     print()
 
     pdfs = collect_pdfs(args.path, args.recursive)
@@ -64,10 +40,10 @@ def main(args):
     skipped = 0
     for pdf in pdfs:
         try:
-            has_text = _has_text(pdf)
+            pdf_has_text = has_text(pdf)
         except Exception:
-            has_text = False
-        if args.force or not has_text:
+            pdf_has_text = False
+        if args.force or not pdf_has_text:
             pending.append(pdf)
         else:
             skipped += 1

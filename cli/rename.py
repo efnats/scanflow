@@ -6,6 +6,7 @@ import time
 
 import requests
 
+from cli.common import collect_pdfs, C_BOLD, C_DIM, C_GREEN, C_CYAN, C_YELLOW, C_RED, C_RESET
 from config import load_config
 from modules.rename import (
     analyze_pdf,
@@ -16,33 +17,6 @@ from modules.rename import (
 )
 
 INITIAL_BATCH_DELAY = 2  # seconds between files in auto mode
-
-# ANSI colors
-C_BOLD = "\033[1m"
-C_DIM = "\033[90m"
-C_GREEN = "\033[32m"
-C_CYAN = "\033[36m"
-C_YELLOW = "\033[33m"
-C_RED = "\033[31m"
-C_RESET = "\033[0m"
-
-
-def collect_pdfs(path, recursive):
-    """Collect PDF files from a path (file or directory)."""
-    if not os.path.isdir(path):
-        return [path]
-    if recursive:
-        pdfs = []
-        for root, _dirs, files in os.walk(path):
-            for f in sorted(files):
-                if f.lower().endswith(".pdf"):
-                    pdfs.append(os.path.join(root, f))
-        return sorted(pdfs)
-    return sorted(
-        os.path.join(path, f)
-        for f in os.listdir(path)
-        if f.lower().endswith(".pdf")
-    )
 
 
 def confirm_rename(old_name, new_name):
@@ -147,7 +121,7 @@ def main(args):
 
     # Clear screen and show header
     print("\033[2J\033[H", end="")
-    print(f"{C_BOLD}scanflow rename{C_RESET} — AI-powered PDF renaming")
+    print(f"{C_BOLD}scanflow rename{C_RESET} - AI-powered PDF renaming")
     print()
 
     pdfs = collect_pdfs(args.path, args.recursive)

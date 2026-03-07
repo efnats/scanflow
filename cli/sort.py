@@ -8,6 +8,7 @@ import time
 
 import requests
 
+from cli.common import collect_pdfs, C_BOLD, C_DIM, C_GREEN, C_YELLOW, C_RESET
 from config import load_config
 from modules.sort import (scan_directory_tree, sort_pdf, suggest_folders,
                           suggest_parent_folders, suggest_new_subfolders,
@@ -15,25 +16,6 @@ from modules.sort import (scan_directory_tree, sort_pdf, suggest_folders,
 
 INITIAL_BATCH_DELAY = 2
 SPINNER = itertools.cycle(["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
-
-
-def collect_pdfs(path, recursive):
-    """Collect PDF files from a path (file or directory)."""
-    if not os.path.isdir(path):
-        return [path]
-    if recursive:
-        pdfs = []
-        for root, dirs, files in os.walk(path):
-            dirs[:] = [d for d in dirs if d != "_skipped"]
-            for f in sorted(files):
-                if f.lower().endswith(".pdf"):
-                    pdfs.append(os.path.join(root, f))
-        return sorted(pdfs)
-    return sorted(
-        os.path.join(path, f)
-        for f in os.listdir(path)
-        if f.lower().endswith(".pdf")
-    )
 
 
 def _build_menu_entries(direct, parents):
@@ -71,7 +53,7 @@ def _refine_into(filename, parent, all_folders, config, text):
     subtree = [f for f in all_folders if f.startswith(new_prefix) or f == parent]
     if not subtree or (len(subtree) == 1 and subtree[0] == parent):
         return None
-    print(f"  \033[90mRefine: {new_prefix}...\033[0m")
+    print(f"  {C_DIM}Refine: {new_prefix}...{C_RESET}")
     direct = suggest_folders(filename, subtree, config, text=text)
     parents = suggest_parent_folders(filename, all_folders, config, prefix=new_prefix, text=text)
     if not direct and not parents:
@@ -86,10 +68,10 @@ def _create_subfolder(filename, parent, base_dir, all_folders, config, text):
     """Show AI-suggested new subfolder names under parent. Returns chosen full path, None (back), or _QUIT."""
     from simple_term_menu import TerminalMenu
 
-    print(f"  \033[90mGenerating subfolder suggestions for {parent}/...\033[0m")
+    print(f"  {C_DIM}Generating subfolder suggestions for {parent}/...{C_RESET}")
     names = suggest_new_subfolders(filename, parent, all_folders, config, text=text)
     if not names:
-        print(f"  \033[33mNo suggestions\033[0m")
+        print(f"  {C_YELLOW}No suggestions{C_RESET}")
         return None
 
     entries = [f"{parent}/{n}" for n in names]
@@ -114,7 +96,7 @@ def _create_subfolder(filename, parent, base_dir, all_folders, config, text):
     chosen = entries[idx]
     target_dir = os.path.join(base_dir, chosen)
     os.makedirs(target_dir, exist_ok=True)
-    print(f"  \033[32m+ Created {chosen}/\033[0m")
+    print(f"  {C_GREEN}+ Created {chosen}/{C_RESET}")
     return chosen
 
 
@@ -137,7 +119,7 @@ def confirm_move(filename, ranked, all_folders, base_dir, config, text=""):
             return None
 
         if prefix:
-            print(f"  \033[90m→  {prefix}\033[0m")
+            print(f"  {C_DIM}→  {prefix}{C_RESET}")
 
         keys = ["enter", "r", "c", "s", "q"]
         bar = "  [enter] select  [r]efine  [c]reate  [s]kip  [q]uit"
@@ -161,7 +143,7 @@ def confirm_move(filename, ranked, all_folders, base_dir, config, text=""):
         key = menu.chosen_accept_key
 
         if key == "q":
-            print("  \033[33mAborted.\033[0m")
+            print(f"  {C_YELLOW}Aborted.{C_RESET}")
             sys.exit(0)
 
         if key == "s" or idx is None:
@@ -187,7 +169,7 @@ def confirm_move(filename, ranked, all_folders, base_dir, config, text=""):
                 if result is None:
                     if value in all_folders:
                         return value
-                    print(f"  \033[33mNo subfolders in {value}/\033[0m")
+                    print(f"  {C_YELLOW}No subfolders in {value}/{C_RESET}")
                     continue
                 history.append((prefix, direct, parents))
                 direct, parents, prefix = result
@@ -199,7 +181,7 @@ def confirm_move(filename, ranked, all_folders, base_dir, config, text=""):
             if result is None:
                 if parent in all_folders:
                     return parent
-                print(f"  \033[33mNo subfolders in {parent}/\033[0m")
+                print(f"  {C_YELLOW}No subfolders in {parent}/{C_RESET}")
                 continue
             history.append((prefix, direct, parents))
             direct, parents, prefix = result
@@ -209,7 +191,7 @@ def confirm_move(filename, ranked, all_folders, base_dir, config, text=""):
             parent = value
             created = _create_subfolder(filename, parent, base_dir, all_folders, config, text)
             if created is _QUIT:
-                print("  \033[33mAborted.\033[0m")
+                print(f"  {C_YELLOW}Aborted.{C_RESET}")
                 sys.exit(0)
             if created:
                 all_folders.append(created)
@@ -227,7 +209,7 @@ def _skip_pdf(pdf_path):
     os.makedirs(skip_dir, exist_ok=True)
     skip_path = resolve_target_path(skip_dir, filename)
     move_pdf(pdf_path, skip_path)
-    print(f"  \033[33m⏭ Skipped → _skipped/{os.path.basename(skip_path)}\033[0m")
+    print(f"  {C_YELLOW}⏭ Skipped → _skipped/{os.path.basename(skip_path)}{C_RESET}")
 
 
 def process_single_pdf(pdf_path, base_dir, folders, config, dry_run, auto_yes, index=0, total=0):
@@ -250,16 +232,16 @@ def process_single_pdf(pdf_path, base_dir, folders, config, dry_run, auto_yes, i
             print(f"\n{progress} {filename}\n    No direct match")
             return True, False
         if auto_yes:
-            print(f"\n\033[1m{progress} {filename}\033[0m")
+            print(f"\n{C_BOLD}{progress} {filename}{C_RESET}")
             _skip_pdf(pdf_path)
             return True, False
-        print(f"\n\033[1m{progress} {filename}\033[0m\n  \033[33mNo direct match — browse folders:\033[0m")
+        print(f"\n{C_BOLD}{progress} {filename}{C_RESET}\n  {C_YELLOW}No direct match - browse folders:{C_RESET}")
         chosen = confirm_move(filename, [], folders, base_dir, config, text=text)
         if chosen is None:
             _skip_pdf(pdf_path)
             return True, False
         target_path = resolve_target_path(os.path.join(base_dir, chosen), filename)
-        print(f"  \033[32m✓ {chosen}/{os.path.basename(target_path)}\033[0m")
+        print(f"  {C_GREEN}✓ {chosen}/{os.path.basename(target_path)}{C_RESET}")
         move_pdf(pdf_path, target_path)
         return True, False
 
@@ -273,11 +255,11 @@ def process_single_pdf(pdf_path, base_dir, folders, config, dry_run, auto_yes, i
         return True, False
 
     if auto_yes:
-        print(f"\n\033[1m{progress} {filename}\033[0m\n  \033[32m✓ {folder}/{os.path.basename(target_path)}\033[0m")
+        print(f"\n{C_BOLD}{progress} {filename}{C_RESET}\n  {C_GREEN}✓ {folder}/{os.path.basename(target_path)}{C_RESET}")
         move_pdf(pdf_path, target_path)
         return True, False
 
-    print(f"\n\033[1m{progress} {filename}\033[0m")
+    print(f"\n{C_BOLD}{progress} {filename}{C_RESET}")
     chosen = confirm_move(filename, ranked, folders, base_dir, config, text=text)
     if chosen is None:
         _skip_pdf(pdf_path)
@@ -287,7 +269,7 @@ def process_single_pdf(pdf_path, base_dir, folders, config, dry_run, auto_yes, i
         folder = chosen
         target_path = resolve_target_path(os.path.join(base_dir, folder), filename)
 
-    print(f"  \033[32m✓ {folder}/{os.path.basename(target_path)}\033[0m")
+    print(f"  {C_GREEN}✓ {folder}/{os.path.basename(target_path)}{C_RESET}")
     move_pdf(pdf_path, target_path)
     return True, False
 
@@ -326,7 +308,7 @@ def main(args):
 
     # Clear screen and show header
     print("\033[2J\033[H", end="")
-    print("\033[1mscanflow sort\033[0m — AI-powered PDF sorting")
+    print(f"{C_BOLD}scanflow sort{C_RESET} - AI-powered PDF sorting")
     print()
 
     # Scan target directory tree with spinner
@@ -352,7 +334,7 @@ def main(args):
     done.clear()
     t = threading.Thread(target=spin, args=("Collecting PDFs...",), daemon=True)
     t.start()
-    pdfs = collect_pdfs(args.source, args.recursive)
+    pdfs = collect_pdfs(args.source, args.recursive, exclude_dirs={"_skipped"})
     done.set()
     t.join()
     if not pdfs:

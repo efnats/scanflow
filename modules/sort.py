@@ -2,7 +2,6 @@
 
 import os
 import shutil
-import sys
 
 from modules.api import ask_ai
 from modules.text import extract_text

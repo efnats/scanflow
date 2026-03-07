@@ -4,13 +4,13 @@ Modular PDF processing toolkit for scanned documents. Watches directories for in
 
 ## Features
 
-- **OCR** via `ocrmypdf` — deskew, image correction, rotation, eng+deu languages
-- **OCR on demand** — bulk-add text layers to existing PDF archives
-- **Duplex scanning** — reverses even pages and interleaves with odd pages into a single document
-- **AI rename** — generates descriptive filenames (e.g. `20260301-DrHaderRechnung.pdf`) using Claude or OpenAI
-- **AI sort** — suggests and moves PDFs into matching directories in a folder tree
-- **Directory watcher** — monitors directories via `inotifywait`, processes files automatically as they arrive
-- **Multi-user** — supports multiple independent directory sets in a single config
+- **OCR** via `ocrmypdf` - deskew, image correction, rotation, eng+deu languages
+- **OCR on demand** - bulk-add text layers to existing PDF archives
+- **Duplex scanning** - reverses even pages and interleaves with odd pages into a single document
+- **AI rename** - generates descriptive filenames (e.g. `20260301-DrHaderRechnung.pdf`) using Claude or OpenAI
+- **AI sort** - suggests and moves PDFs into matching directories in a folder tree
+- **Directory watcher** - monitors directories via `inotifywait`, processes files automatically as they arrive
+- **Multi-user** - supports multiple independent directory sets in a single config
 
 ## Requirements
 
@@ -80,10 +80,10 @@ API keys can also be set via environment variables (`ANTHROPIC_API_KEY`, `OPENAI
 All functionality is accessible through a single entry point with subcommands:
 
 ```
-scanflow watch    — directory watcher daemon
-scanflow ocr      — batch OCR for PDFs without text layer
-scanflow rename   — AI-powered PDF renaming
-scanflow sort     — AI-powered PDF sorting into folders
+scanflow watch    - directory watcher daemon
+scanflow ocr      - batch OCR for PDFs without text layer
+scanflow rename   - AI-powered PDF renaming
+scanflow sort     - AI-powered PDF sorting into folders
 ```
 
 ### watch
@@ -112,9 +112,9 @@ scanflow ocr /path/to/documents -r --force
 ```
 
 Options:
-- `-r, --recursive` — process subdirectories
-- `--dry-run` — only show which files need OCR
-- `--force` — re-run OCR even on files that already have a text layer
+- `-r, --recursive` - process subdirectories
+- `--dry-run` - only show which files need OCR
+- `--force` - re-run OCR even on files that already have a text layer
 
 ### rename
 
@@ -138,12 +138,12 @@ scanflow rename --tag-only /path/to/pdfs/
 ```
 
 Options:
-- `-y, --yes` — skip confirmation, rename automatically
-- `-r, --recursive` — process subdirectories
-- `--dry-run` — show suggested names without renaming
-- `--force` — re-process files that were already renamed
-- `--tag-only` — only write AI keywords to PDF metadata, do not rename
-- `--config` — path to config file
+- `-y, --yes` - skip confirmation, rename automatically
+- `-r, --recursive` - process subdirectories
+- `--dry-run` - show suggested names without renaming
+- `--force` - re-process files that were already renamed
+- `--tag-only` - only write AI keywords to PDF metadata, do not rename
+- `--config` - path to config file
 
 ### sort
 
@@ -164,10 +164,10 @@ scanflow sort -r /inbox/ /archive/
 ```
 
 Options:
-- `-y, --yes` — skip confirmation, move automatically
-- `-r, --recursive` — search source subdirectories recursively
-- `--dry-run` — only show suggestions, do not move files
-- `--config` — path to config file
+- `-y, --yes` - skip confirmation, move automatically
+- `-r, --recursive` - search source subdirectories recursively
+- `--dry-run` - only show suggestions, do not move files
+- `--config` - path to config file
 
 ## How It Works
 
@@ -186,7 +186,7 @@ Options:
 
 ### OCR on demand
 
-The `rename` and `sort` commands automatically detect PDFs without a text layer and run OCR before processing. This means they work with any PDF — not just those that came through the watcher pipeline.
+The `rename` and `sort` commands automatically detect PDFs without a text layer and run OCR before processing. This means they work with any PDF - not just those that came through the watcher pipeline.
 
 ### AI rename
 

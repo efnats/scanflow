@@ -27,7 +27,7 @@ def ocr_file(input_file, output_file):
         raise RuntimeError(f"ocrmypdf failed: {result.stderr.strip()}")
 
 
-def _has_text(pdf_path):
+def has_text(pdf_path):
     """Check if a PDF has any extractable text."""
     doc = fitz.open(pdf_path)
     for page in doc:
@@ -44,7 +44,7 @@ def ocr_if_needed(pdf_path, force=False):
     If force=True, always re-run OCR regardless of existing text.
     Returns True if OCR was performed, False if text already present.
     """
-    if not force and _has_text(pdf_path):
+    if not force and has_text(pdf_path):
         return False
     fd, tmp_path = tempfile.mkstemp(suffix=".pdf", dir=os.path.dirname(pdf_path))
     os.close(fd)
