@@ -202,6 +202,16 @@ def confirm_move(filename, ranked, all_folders, base_dir, config, text=""):
     return None
 
 
+def _move_to_failed(pdf_path):
+    """Move a PDF to _failed/ next to its current location."""
+    filename = os.path.basename(pdf_path)
+    fail_dir = os.path.join(os.path.dirname(pdf_path), "_failed")
+    os.makedirs(fail_dir, exist_ok=True)
+    fail_path = resolve_target_path(fail_dir, filename)
+    move_pdf(pdf_path, fail_path)
+    print(f"  {C_YELLOW}Moved to _failed/{os.path.basename(fail_path)}{C_RESET}")
+
+
 def _skip_pdf(pdf_path):
     """Move a PDF to _skipped/ next to its current location. Handles duplicates."""
     filename = os.path.basename(pdf_path)
@@ -222,9 +232,13 @@ def process_single_pdf(pdf_path, base_dir, folders, config, dry_run, auto_yes, i
     except requests.exceptions.HTTPError as e:
         rate_limited = e.response is not None and e.response.status_code == 429
         print(f"\n{progress} {filename}\n  ERROR: {e}", file=sys.stderr)
+        if not dry_run:
+            _move_to_failed(pdf_path)
         return False, rate_limited
     except Exception as e:
         print(f"\n{progress} {filename}\n  ERROR: {e}", file=sys.stderr)
+        if not dry_run:
+            _move_to_failed(pdf_path)
         return False, False
 
     if folder is None:

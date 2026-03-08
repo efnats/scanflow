@@ -19,6 +19,16 @@ from modules.rename import (
 INITIAL_BATCH_DELAY = 2  # seconds between files in auto mode
 
 
+def _move_to_failed(pdf_path):
+    """Move a PDF to _failed/ next to its current location."""
+    filename = os.path.basename(pdf_path)
+    fail_dir = os.path.join(os.path.dirname(pdf_path), "_failed")
+    os.makedirs(fail_dir, exist_ok=True)
+    target = os.path.join(fail_dir, filename)
+    os.rename(pdf_path, target)
+    print(f"  {C_YELLOW}Moved to _failed/{filename}{C_RESET}")
+
+
 def confirm_rename(old_name, new_name):
     """Ask user to confirm a rename. Returns True if confirmed."""
     try:
@@ -41,10 +51,14 @@ def process_single_pdf(pdf_path, config, dry_run, auto_yes, tag_only=False, inde
         rate_limited = e.response is not None and e.response.status_code == 429
         print(f"\n{progress} {C_BOLD}{old_name}{C_RESET}")
         print(f"  {C_RED}ERROR: {e}{C_RESET}", file=sys.stderr)
+        if not dry_run:
+            _move_to_failed(pdf_path)
         return False, rate_limited
     except Exception as e:
         print(f"\n{progress} {C_BOLD}{old_name}{C_RESET}")
         print(f"  {C_RED}ERROR: {e}{C_RESET}", file=sys.stderr)
+        if not dry_run:
+            _move_to_failed(pdf_path)
         return False, False
 
     write_keywords(pdf_path, keywords)

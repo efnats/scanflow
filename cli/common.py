@@ -12,18 +12,22 @@ C_RED = "\033[31m"
 C_RESET = "\033[0m"
 
 
+ALWAYS_EXCLUDE = {"_failed"}
+
+
 def collect_pdfs(path, recursive, exclude_dirs=None):
     """Collect PDF files from a path (file or directory).
 
     exclude_dirs: set of directory names to skip during recursive walk.
+    _failed/ is always excluded.
     """
+    skip = ALWAYS_EXCLUDE | (exclude_dirs or set())
     if not os.path.isdir(path):
         return [path]
     if recursive:
         pdfs = []
         for root, dirs, files in os.walk(path):
-            if exclude_dirs:
-                dirs[:] = [d for d in dirs if d not in exclude_dirs]
+            dirs[:] = [d for d in dirs if d not in skip]
             for f in sorted(files):
                 if f.lower().endswith(".pdf"):
                     pdfs.append(os.path.join(root, f))
