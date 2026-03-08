@@ -17,6 +17,15 @@ REQUIRED_TOOLS = {
     "pdftk": "pdftk",
 }
 
+# Python modules required per subcommand (module_name -> pip package)
+REQUIRED_MODULES = {
+    "watch": {},
+    "ocr": {"fitz": "pymupdf"},
+    "rename": {"fitz": "pymupdf", "requests": "requests"},
+    "sort": {"fitz": "pymupdf", "requests": "requests",
+             "simple_term_menu": "simple-term-menu"},
+}
+
 
 def find_config():
     """Search for the config file in default paths."""
@@ -66,8 +75,8 @@ def get_watch_sections(config):
     return watches
 
 
-def check_dependencies():
-    """Check that required external tools are installed."""
+def check_dependencies(command=None):
+    """Check that required external tools and Python modules are installed."""
     missing = []
     for tool, package in REQUIRED_TOOLS.items():
         if not shutil.which(tool):
@@ -76,6 +85,19 @@ def check_dependencies():
         print(f"Missing dependencies: {', '.join(missing)}", file=sys.stderr)
         print(f"Install with: apt install {' '.join(missing)}", file=sys.stderr)
         sys.exit(1)
+
+    if command and command in REQUIRED_MODULES:
+        import importlib
+        missing_py = []
+        for module, package in REQUIRED_MODULES[command].items():
+            try:
+                importlib.import_module(module)
+            except ImportError:
+                missing_py.append(package)
+        if missing_py:
+            print(f"Missing Python packages: {', '.join(missing_py)}", file=sys.stderr)
+            print(f"Install with: pip3 install {' '.join(missing_py)}", file=sys.stderr)
+            sys.exit(1)
 
 
 def has_rename_config(config):

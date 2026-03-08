@@ -5,6 +5,7 @@ import argparse
 import sys
 
 from cli import watch, ocr, rename, sort
+from config import check_dependencies
 
 
 def main():
@@ -25,6 +26,7 @@ def main():
         parser.print_help()
         sys.exit(1)
 
+    check_dependencies(args.command)
     args.func(args)
 
 
