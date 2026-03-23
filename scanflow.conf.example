@@ -1,7 +1,7 @@
 [general]
-# AI provider for rename: claude or openai
+# AI provider: claude, openai, or ollama
 provider = claude
-# model (optional, default per provider)
+# model (optional for claude/openai, required for ollama)
 # model = claude-sonnet-4-20250514
 # model = gpt-4o
 
@@ -14,6 +14,11 @@ api_key = sk-ant-...
 # API key here or set OPENAI_API_KEY env variable
 # Env variable takes precedence over config
 api_key = sk-...
+
+[ollama]
+# url = http://localhost:11434
+# model = gemma3:27b
+# api_key = ...  (optional, for authenticated remote instances)
 
 [sort]
 # Default source and target directories for 'scanflow sort'

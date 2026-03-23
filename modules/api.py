@@ -10,11 +10,13 @@ import requests
 DEFAULT_MODELS = {
     "claude": "claude-sonnet-4-20250514",
     "openai": "gpt-4o",
+    "ollama": None,
 }
 
 ENV_KEYS = {
     "claude": "ANTHROPIC_API_KEY",
     "openai": "OPENAI_API_KEY",
+    "ollama": "OLLAMA_API_KEY",
 }
 
 MAX_RETRIES = 5
@@ -28,6 +30,8 @@ def get_api_key(provider, config):
         return key
     if config.has_option(provider, "api_key"):
         return config.get(provider, "api_key")
+    if provider == "ollama":
+        return None
     raise ValueError(
         f"No API key found for '{provider}'. "
         f"Set {env_var} or add api_key to [{provider}] in the config file."
@@ -60,6 +64,8 @@ def ask_ai(prompt, config):
         return _call_claude(prompt, config)
     elif provider == "openai":
         return _call_openai(prompt, config)
+    elif provider == "ollama":
+        return _call_ollama(prompt, config)
     else:
         raise ValueError(f"Unknown provider '{provider}'")
 
@@ -114,6 +120,34 @@ def _call_openai(prompt, config):
             ],
         },
         timeout=30,
+    )
+    data = resp.json()
+    return data["choices"][0]["message"]["content"].strip()
+
+
+def _call_ollama(prompt, config):
+    """Send prompt to Ollama API (OpenAI-compatible endpoint)."""
+    url = config.get("ollama", "url", fallback="http://localhost:11434")
+    if not config.has_option("ollama", "model"):
+        raise ValueError("Ollama requires [ollama] model in config (e.g. model = gemma3:27b)")
+    model = config.get("ollama", "model")
+    api_key = get_api_key("ollama", config)
+
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    resp = api_request_with_retry(
+        requests.post,
+        f"{url.rstrip('/')}/v1/chat/completions",
+        headers=headers,
+        json={
+            "model": model,
+            "messages": [
+                {"role": "user", "content": prompt}
+            ],
+        },
+        timeout=120,
     )
     data = resp.json()
     return data["choices"][0]["message"]["content"].strip()

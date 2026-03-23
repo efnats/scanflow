@@ -105,6 +105,9 @@ def has_rename_config(config):
     if not config.has_option("general", "provider"):
         return False
     provider = config.get("general", "provider")
+    # Ollama needs no API key, just a model
+    if provider == "ollama":
+        return config.has_option("ollama", "model")
     # Check env var
     from modules.api import ENV_KEYS
     env_var = ENV_KEYS.get(provider)
