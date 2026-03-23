@@ -4,6 +4,8 @@ provider = claude
 # model (optional for claude/openai, required for ollama)
 # model = claude-sonnet-4-20250514
 # model = gpt-4o
+# ollama_mode: idle (prefer idle servers) or priority (strict priority order)
+# ollama_mode = idle
 
 [claude]
 # API key here or set ANTHROPIC_API_KEY env variable

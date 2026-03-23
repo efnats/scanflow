@@ -176,15 +176,23 @@ def _send_to_ollama(inst, prompt):
     return data["choices"][0]["message"]["content"].strip()
 
 
-def _call_ollama(prompt, config):
-    """Send prompt to Ollama API with smart server selection.
+def _call_ollama_priority(instances):
+    """Try instances strictly by priority, failover on connection errors."""
+    errors = []
+    for inst in instances:
+        try:
+            requests.get(f"{inst['url'].rstrip('/')}/api/ps", timeout=2)
+            return inst
+        except (requests.ConnectionError, requests.Timeout):
+            errors.append(inst["name"])
+    raise ConnectionError(
+        f"All Ollama instances unreachable: "
+        + ", ".join(f"{i['name']} ({i['url']})" for i in instances)
+    )
 
-    Checks which servers are idle and picks the highest-priority idle one.
-    Falls back to highest-priority reachable server if all are busy.
-    """
-    instances = _get_ollama_instances(config)
 
-    # First pass: check all servers, find idle or reachable
+def _call_ollama_idle(instances):
+    """Pick the highest-priority idle server, fall back to busy if none idle."""
     reachable = []
     for inst in instances:
         try:
@@ -193,19 +201,36 @@ def _call_ollama(prompt, config):
                 models = resp.json().get("models", [])
                 if len(models) == 0:
                     print(f"  Using ollama '{inst['name']}' (idle)", file=sys.stderr)
-                    return _send_to_ollama(inst, prompt)
+                    return inst
                 reachable.append(inst)
         except (requests.ConnectionError, requests.Timeout):
             pass
-
-    # Fallback: all busy, queue on highest-priority reachable server
     if reachable:
         inst = reachable[0]
         print(f"  Using ollama '{inst['name']}' (all busy, queuing)", file=sys.stderr)
-        return _send_to_ollama(inst, prompt)
-
-    # All unreachable
+        return inst
     raise ConnectionError(
         f"All Ollama instances unreachable: "
         + ", ".join(f"{i['name']} ({i['url']})" for i in instances)
     )
+
+
+def _call_ollama(prompt, config):
+    """Send prompt to Ollama API with configurable server selection.
+
+    Selection mode is set via [general] ollama_mode (default: idle).
+    - priority: strict priority order, failover only on connection errors
+    - idle: prefer idle servers, fall back to highest-priority busy server
+    """
+    instances = _get_ollama_instances(config)
+    mode = config.get("general", "ollama_mode", fallback="idle")
+
+    if mode == "priority":
+        inst = _call_ollama_priority(instances)
+        print(f"  Using ollama '{inst['name']}' (priority)", file=sys.stderr)
+    elif mode == "idle":
+        inst = _call_ollama_idle(instances)
+    else:
+        raise ValueError(f"Unknown ollama_mode '{mode}' (use 'priority' or 'idle')")
+
+    return _send_to_ollama(inst, prompt)
