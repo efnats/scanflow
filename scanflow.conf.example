@@ -15,6 +15,12 @@ api_key = sk-ant-...
 # Env variable takes precedence over config
 api_key = sk-...
 
+[sort]
+# Number of direct folder suggestions (default: 5)
+# max_suggestions = 5
+# Number of parent category suggestions (default: 5)
+# max_parent_suggestions = 5
+
 # One [watch:name] section per directory set to monitor
 [watch:user1]
 single_dir = /scans/user1/single

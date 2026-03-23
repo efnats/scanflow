@@ -176,12 +176,11 @@ def confirm_move(filename, ranked, all_folders, base_dir, config, text=""):
                 continue
 
         if key == "r":
-            parent = _get_parent_for_entry(value, prefix)
-            result = _refine_into(filename, parent, all_folders, config, text)
+            result = _refine_into(filename, value, all_folders, config, text)
             if result is None:
-                if parent in all_folders:
-                    return parent
-                print(f"  {C_YELLOW}No subfolders in {parent}/{C_RESET}")
+                if value in all_folders:
+                    return value
+                print(f"  {C_YELLOW}No subfolders in {value}/{C_RESET}")
                 continue
             history.append((prefix, direct, parents))
             direct, parents, prefix = result

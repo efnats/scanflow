@@ -7,13 +7,22 @@ from modules.api import ask_ai
 from modules.text import extract_text
 
 MAX_TEXT_CHARS = 2000
+DEFAULT_MAX_SUGGESTIONS = 5
+DEFAULT_MAX_PARENT_SUGGESTIONS = 5
+
+
+def _get_sort_config(config):
+    """Read sort-specific config values."""
+    max_s = config.getint("sort", "max_suggestions", fallback=DEFAULT_MAX_SUGGESTIONS)
+    max_p = config.getint("sort", "max_parent_suggestions", fallback=DEFAULT_MAX_PARENT_SUGGESTIONS)
+    return max_s, max_p
 
 PROMPT_TEMPLATE = (
     "Du bekommst einen PDF-Dateinamen, den Textinhalt des PDFs, "
     "und eine Liste von Zielordnern. "
     "Waehle die passendsten Ordner fuer diese Datei, sortiert nach Wahrscheinlichkeit. "
     "Antworte NUR mit den exakten Ordnerpfaden aus der Liste, einer pro Zeile, "
-    "der beste zuerst. Maximal 5 Vorschlaege. "
+    "der beste zuerst. Maximal {max_suggestions} Vorschlaege. "
     "Falls kein Ordner passt, antworte mit: NONE"
     "\n\nDateiname: {filename}"
     "\n\nTextinhalt:\n{text}"
@@ -23,7 +32,7 @@ PROMPT_TEMPLATE = (
 REFINE_PROMPT_TEMPLATE = (
     "Du bekommst einen PDF-Dateinamen, den Textinhalt des PDFs, "
     "und eine Liste von Ueberordnern (Kategorien). "
-    "Waehle die 5 relevantesten Kategorien fuer diese Datei, sortiert nach Wahrscheinlichkeit. "
+    "Waehle die {max_parent_suggestions} relevantesten Kategorien fuer diese Datei, sortiert nach Wahrscheinlichkeit. "
     "Antworte NUR mit den exakten Kategorienamen aus der Liste, einer pro Zeile."
     "\n\nDateiname: {filename}"
     "\n\nTextinhalt:\n{text}"
@@ -68,8 +77,10 @@ def _match_folder(candidate, folders):
 
 def suggest_folders(filename, folders, config, text=""):
     """Ask AI to suggest matching folders ranked by likelihood. Returns list of folder strings."""
+    max_s, _ = _get_sort_config(config)
     folder_list = "\n".join(folders)
-    prompt = PROMPT_TEMPLATE.format(filename=filename, text=text or "(nicht verfuegbar)", folder_list=folder_list)
+    prompt = PROMPT_TEMPLATE.format(filename=filename, text=text or "(nicht verfuegbar)",
+                                    folder_list=folder_list, max_suggestions=max_s)
     response = ask_ai(prompt, config).strip()
     if response == "NONE":
         return []
@@ -78,15 +89,16 @@ def suggest_folders(filename, folders, config, text=""):
         folder = _match_folder(line, folders)
         if folder and folder not in matched:
             matched.append(folder)
-    return matched
+    return matched[:max_s]
 
 
 def suggest_parent_folders(filename, folders, config, prefix="", text=""):
     """Ask AI to suggest the most relevant parent categories for refinement.
 
     If prefix is given, returns next-level children under that prefix.
-    Returns up to 5 parent folder names (without trailing slash).
+    Returns up to max_parent_suggestions parent folder names (without trailing slash).
     """
+    _, max_p = _get_sort_config(config)
     # Determine the depth level to extract
     depth = prefix.count("/") if prefix else 0
     parents = set()
@@ -99,13 +111,13 @@ def suggest_parent_folders(filename, folders, config, prefix="", text=""):
     parents = sorted(parents)
     if not parents:
         return []
-    if len(parents) <= 5:
+    if len(parents) <= max_p:
         return parents
 
     category_list = "\n".join(parents)
     prompt = REFINE_PROMPT_TEMPLATE.format(
         filename=filename, text=text or "(nicht verfuegbar)",
-        category_list=category_list
+        category_list=category_list, max_parent_suggestions=max_p
     )
     response = ask_ai(prompt, config).strip()
     matched = []
@@ -113,7 +125,7 @@ def suggest_parent_folders(filename, folders, config, prefix="", text=""):
         candidate = line.strip().strip("/")
         if candidate in parents and candidate not in matched:
             matched.append(candidate)
-    return matched[:5]
+    return matched[:max_p]
 
 
 def suggest_new_subfolders(filename, parent, folders, config, text=""):
