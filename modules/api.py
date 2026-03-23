@@ -155,34 +155,57 @@ def _get_ollama_instances(config):
     return instances
 
 
+def _send_to_ollama(inst, prompt):
+    """Send a prompt to a specific Ollama instance. Returns response text."""
+    headers = {"Content-Type": "application/json"}
+    if inst["api_key"]:
+        headers["Authorization"] = f"Bearer {inst['api_key']}"
+    resp = api_request_with_retry(
+        requests.post,
+        f"{inst['url'].rstrip('/')}/v1/chat/completions",
+        headers=headers,
+        json={
+            "model": inst["model"],
+            "messages": [
+                {"role": "user", "content": prompt}
+            ],
+        },
+        timeout=120,
+    )
+    data = resp.json()
+    return data["choices"][0]["message"]["content"].strip()
+
+
 def _call_ollama(prompt, config):
-    """Send prompt to Ollama API with priority-based failover."""
+    """Send prompt to Ollama API with smart server selection.
+
+    Checks which servers are idle and picks the highest-priority idle one.
+    Falls back to highest-priority reachable server if all are busy.
+    """
     instances = _get_ollama_instances(config)
-    errors = []
+
+    # First pass: check all servers, find idle or reachable
+    reachable = []
     for inst in instances:
-        headers = {"Content-Type": "application/json"}
-        if inst["api_key"]:
-            headers["Authorization"] = f"Bearer {inst['api_key']}"
         try:
-            resp = api_request_with_retry(
-                requests.post,
-                f"{inst['url'].rstrip('/')}/v1/chat/completions",
-                headers=headers,
-                json={
-                    "model": inst["model"],
-                    "messages": [
-                        {"role": "user", "content": prompt}
-                    ],
-                },
-                timeout=120,
-            )
-            data = resp.json()
-            return data["choices"][0]["message"]["content"].strip()
-        except (requests.ConnectionError, requests.Timeout) as e:
-            print(f"  Ollama '{inst['name']}' ({inst['url']}) unavailable: {e}",
-                  file=sys.stderr)
-            errors.append(f"{inst['name']}: {e}")
-            continue
+            resp = requests.get(f"{inst['url'].rstrip('/')}/api/ps", timeout=2)
+            if resp.status_code == 200:
+                models = resp.json().get("models", [])
+                if len(models) == 0:
+                    print(f"  Using ollama '{inst['name']}' (idle)", file=sys.stderr)
+                    return _send_to_ollama(inst, prompt)
+                reachable.append(inst)
+        except (requests.ConnectionError, requests.Timeout):
+            pass
+
+    # Fallback: all busy, queue on highest-priority reachable server
+    if reachable:
+        inst = reachable[0]
+        print(f"  Using ollama '{inst['name']}' (all busy, queuing)", file=sys.stderr)
+        return _send_to_ollama(inst, prompt)
+
+    # All unreachable
     raise ConnectionError(
-        f"All Ollama instances failed:\n  " + "\n  ".join(errors)
+        f"All Ollama instances unreachable: "
+        + ", ".join(f"{i['name']} ({i['url']})" for i in instances)
     )
