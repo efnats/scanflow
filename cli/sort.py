@@ -107,10 +107,11 @@ def confirm_move(filename, ranked, all_folders, base_dir, config, text=""):
     """
     from simple_term_menu import TerminalMenu
 
-    # History stack: list of (prefix, direct, parents) for back navigation
+    # History stack: list of (prefix, direct, parents, parent_limit) for back navigation
     history = []
     prefix = ""
     direct = list(ranked)
+    parent_limit = None  # use config default initially
     parents = suggest_parent_folders(filename, all_folders, config, prefix="", text=text)
 
     while True:
@@ -121,11 +122,11 @@ def confirm_move(filename, ranked, all_folders, base_dir, config, text=""):
         if prefix:
             print(f"  {C_DIM}→  {prefix}{C_RESET}")
 
-        keys = ["enter", "r", "c", "s", "q"]
-        bar = "  [enter] select  [r]efine  [c]reate  [s]kip  [q]uit"
+        keys = ["enter", "r", "c", "m", "s", "q"]
+        bar = "  [enter] select  [r]efine  [c]reate  [m]ore  [s]kip  [q]uit"
         if history:
             keys.append("b")
-            bar = "  [enter] select  [r]efine  [c]reate  [b]ack  [s]kip  [q]uit"
+            bar = "  [enter] select  [r]efine  [c]reate  [m]ore  [b]ack  [s]kip  [q]uit"
 
         menu = TerminalMenu(
             entries,
@@ -150,7 +151,7 @@ def confirm_move(filename, ranked, all_folders, base_dir, config, text=""):
             return None
 
         if key == "b" and history:
-            prefix, direct, parents = history.pop()
+            prefix, direct, parents, parent_limit = history.pop()
             continue
 
         if idx not in entry_map:
@@ -159,6 +160,21 @@ def confirm_move(filename, ranked, all_folders, base_dir, config, text=""):
         etype, value = entry_map[idx]
 
         if etype == "separator":
+            continue
+
+        if key == "m":
+            from modules.sort import _get_sort_config
+            _, default_max = _get_sort_config(config)
+            current = parent_limit or default_max
+            new_limit = current * 2
+            new_parents = suggest_parent_folders(filename, all_folders, config,
+                                                  prefix=prefix, text=text,
+                                                  max_override=new_limit)
+            if len(new_parents) <= len(parents):
+                print(f"  {C_YELLOW}No more folders available{C_RESET}")
+            else:
+                parent_limit = new_limit
+                parents = new_parents
             continue
 
         if key == "enter":
@@ -171,7 +187,8 @@ def confirm_move(filename, ranked, all_folders, base_dir, config, text=""):
                         return value
                     print(f"  {C_YELLOW}No subfolders in {value}/{C_RESET}")
                     continue
-                history.append((prefix, direct, parents))
+                history.append((prefix, direct, parents, parent_limit))
+                parent_limit = None
                 direct, parents, prefix = result
                 continue
 
@@ -182,7 +199,8 @@ def confirm_move(filename, ranked, all_folders, base_dir, config, text=""):
                     return value
                 print(f"  {C_YELLOW}No subfolders in {value}/{C_RESET}")
                 continue
-            history.append((prefix, direct, parents))
+            history.append((prefix, direct, parents, parent_limit))
+            parent_limit = None
             direct, parents, prefix = result
             continue
 

@@ -92,13 +92,16 @@ def suggest_folders(filename, folders, config, text=""):
     return matched[:max_s]
 
 
-def suggest_parent_folders(filename, folders, config, prefix="", text=""):
+def suggest_parent_folders(filename, folders, config, prefix="", text="", max_override=None):
     """Ask AI to suggest the most relevant parent categories for refinement.
 
     If prefix is given, returns next-level children under that prefix.
     Returns up to max_parent_suggestions parent folder names (without trailing slash).
+    If max_override is set, use it instead of the config default.
     """
     _, max_p = _get_sort_config(config)
+    if max_override is not None:
+        max_p = max_override
     # Determine the depth level to extract
     depth = prefix.count("/") if prefix else 0
     parents = set()
