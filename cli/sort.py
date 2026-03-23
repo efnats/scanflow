@@ -290,8 +290,10 @@ def process_single_pdf(pdf_path, base_dir, folders, config, dry_run, auto_yes, i
 def setup_parser(subparsers):
     """Register the 'sort' subcommand."""
     p = subparsers.add_parser("sort", help="Sort PDFs into directories based on AI analysis")
-    p.add_argument("source", help="PDF file or directory containing PDFs to sort")
-    p.add_argument("target", help="Target directory tree to sort into")
+    p.add_argument("source", nargs="?", default=None,
+                    help="PDF file or directory containing PDFs to sort (default: from config)")
+    p.add_argument("target", nargs="?", default=None,
+                    help="Target directory tree to sort into (default: from config)")
     p.add_argument("--config", default=None,
                     help="Path to config file")
     p.add_argument("--dry-run", action="store_true",
@@ -305,6 +307,19 @@ def setup_parser(subparsers):
 
 def main(args):
     """Run the sort command."""
+    config = load_config(args.config)
+
+    # Fall back to config defaults if not given on command line
+    if args.source is None:
+        args.source = config.get("sort", "source", fallback=None)
+    if args.target is None:
+        args.target = config.get("sort", "target", fallback=None)
+
+    if not args.source or not args.target:
+        print("Error: source and target required. Provide as arguments or set in [sort] config.",
+              file=sys.stderr)
+        sys.exit(1)
+
     if not os.path.exists(args.source):
         print(f"Error: Source not found: {args.source}", file=sys.stderr)
         sys.exit(1)
@@ -312,8 +327,6 @@ def main(args):
     if not os.path.isdir(args.target):
         print(f"Error: Target directory not found: {args.target}", file=sys.stderr)
         sys.exit(1)
-
-    config = load_config(args.config)
 
     if not config.has_option("general", "provider"):
         print("Error: Config must contain [general] provider", file=sys.stderr)

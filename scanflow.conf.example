@@ -16,6 +16,9 @@ api_key = sk-ant-...
 api_key = sk-...
 
 [sort]
+# Default source and target directories for 'scanflow sort'
+# source = /scans/output
+# target = /documents
 # Number of direct folder suggestions (default: 5)
 # max_suggestions = 5
 # Number of parent category suggestions (default: 5)
