@@ -7,8 +7,9 @@ Modular PDF processing toolkit for scanned documents. Watches directories for in
 - **OCR** via `ocrmypdf` - deskew, image correction, rotation, eng+deu languages
 - **OCR on demand** - bulk-add text layers to existing PDF archives
 - **Duplex scanning** - reverses even pages and interleaves with odd pages into a single document
-- **AI rename** - generates descriptive filenames (e.g. `20260301-DrHaderRechnung.pdf`) using Claude or OpenAI
+- **AI rename** - generates descriptive filenames (e.g. `20260301-DrHaderRechnung.pdf`) using Claude, OpenAI, or Ollama
 - **AI sort** - suggests and moves PDFs into matching directories in a folder tree
+- **Multi-provider** - supports Claude, OpenAI, and Ollama (local); multiple Ollama instances with smart load balancing
 - **Directory watcher** - monitors directories via `inotifywait`, processes files automatically as they arrive
 - **Multi-user** - supports multiple independent directory sets in a single config
 
@@ -32,7 +33,7 @@ scanflow/
 │   ├── rename.py         # Subcommand: AI-powered PDF renaming
 │   └── sort.py           # Subcommand: AI-powered PDF sorting into folders
 ├── modules/
-│   ├── api.py            # AI API client (Claude / OpenAI)
+│   ├── api.py            # AI API client (Claude / OpenAI / Ollama)
 │   ├── ocr.py            # OCR via ocrmypdf
 │   ├── text.py           # Shared text extraction with OCR-on-demand fallback
 │   ├── multipage.py      # Duplex page interleaving via pdftk
@@ -53,6 +54,7 @@ cp scanflow.conf.example /etc/scanflow.conf
 
 ```ini
 [general]
+# provider: claude, openai, or ollama
 provider = claude
 # model = claude-sonnet-4-20250514
 
@@ -61,6 +63,23 @@ api_key = sk-ant-...
 
 [openai]
 api_key = sk-...
+
+# Ollama: multiple instances supported, tried by priority (lowest first)
+# Idle servers are preferred over busy ones automatically
+[ollama:server1]
+url = http://192.168.1.100:11434
+model = gemma3:27b
+priority = 10
+
+[ollama:server2]
+url = http://192.168.1.101:11434
+model = qwen3:14b
+priority = 20
+
+[sort]
+# Default source and target directories for 'scanflow sort'
+# source = /scans/output
+# target = /documents
 
 [watch:user1]
 single_dir = /scans/user1/single
@@ -191,7 +210,7 @@ The `rename` and `sort` commands automatically detect PDFs without a text layer 
 ### AI rename
 
 - Extracts text from the OCR layer using pymupdf
-- Sends text to Claude or OpenAI with a prompt requesting a `YYYYMMDD-Description` filename
+- Sends text to Claude, OpenAI, or Ollama with a prompt requesting a `YYYYMMDD-Description` filename
 - Falls back to the original timestamp if no document date is found
 - Skips files where no meaningful name can be determined
 - Writes AI-generated keywords to PDF metadata
