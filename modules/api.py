@@ -125,29 +125,64 @@ def _call_openai(prompt, config):
     return data["choices"][0]["message"]["content"].strip()
 
 
+def _get_ollama_instances(config):
+    """Collect and return Ollama instances sorted by priority (lowest first)."""
+    instances = []
+    for section in config.sections():
+        if section.startswith("ollama:"):
+            name = section.split(":", 1)[1]
+            if not config.has_option(section, "model"):
+                continue
+            instances.append({
+                "name": name,
+                "url": config.get(section, "url", fallback="http://localhost:11434"),
+                "model": config.get(section, "model"),
+                "api_key": config.get(section, "api_key", fallback=None),
+                "priority": config.getint(section, "priority", fallback=100),
+            })
+    # Legacy [ollama] section (backwards compatible)
+    if config.has_section("ollama") and config.has_option("ollama", "model"):
+        instances.append({
+            "name": "default",
+            "url": config.get("ollama", "url", fallback="http://localhost:11434"),
+            "model": config.get("ollama", "model"),
+            "api_key": config.get("ollama", "api_key", fallback=None),
+            "priority": config.getint("ollama", "priority", fallback=100),
+        })
+    if not instances:
+        raise ValueError("No Ollama instances configured. Add [ollama:name] sections with model = ...")
+    instances.sort(key=lambda x: x["priority"])
+    return instances
+
+
 def _call_ollama(prompt, config):
-    """Send prompt to Ollama API (OpenAI-compatible endpoint)."""
-    url = config.get("ollama", "url", fallback="http://localhost:11434")
-    if not config.has_option("ollama", "model"):
-        raise ValueError("Ollama requires [ollama] model in config (e.g. model = gemma3:27b)")
-    model = config.get("ollama", "model")
-    api_key = get_api_key("ollama", config)
-
-    headers = {"Content-Type": "application/json"}
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
-
-    resp = api_request_with_retry(
-        requests.post,
-        f"{url.rstrip('/')}/v1/chat/completions",
-        headers=headers,
-        json={
-            "model": model,
-            "messages": [
-                {"role": "user", "content": prompt}
-            ],
-        },
-        timeout=120,
+    """Send prompt to Ollama API with priority-based failover."""
+    instances = _get_ollama_instances(config)
+    errors = []
+    for inst in instances:
+        headers = {"Content-Type": "application/json"}
+        if inst["api_key"]:
+            headers["Authorization"] = f"Bearer {inst['api_key']}"
+        try:
+            resp = api_request_with_retry(
+                requests.post,
+                f"{inst['url'].rstrip('/')}/v1/chat/completions",
+                headers=headers,
+                json={
+                    "model": inst["model"],
+                    "messages": [
+                        {"role": "user", "content": prompt}
+                    ],
+                },
+                timeout=120,
+            )
+            data = resp.json()
+            return data["choices"][0]["message"]["content"].strip()
+        except (requests.ConnectionError, requests.Timeout) as e:
+            print(f"  Ollama '{inst['name']}' ({inst['url']}) unavailable: {e}",
+                  file=sys.stderr)
+            errors.append(f"{inst['name']}: {e}")
+            continue
+    raise ConnectionError(
+        f"All Ollama instances failed:\n  " + "\n  ".join(errors)
     )
-    data = resp.json()
-    return data["choices"][0]["message"]["content"].strip()

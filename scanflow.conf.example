@@ -15,10 +15,19 @@ api_key = sk-ant-...
 # Env variable takes precedence over config
 api_key = sk-...
 
-[ollama]
-# url = http://localhost:11434
+# Ollama instances - multiple supported, tried by priority (lowest first)
+# Use [ollama:name] for named instances, or [ollama] for a single one
+
+# [ollama:server1]
+# url = http://192.168.1.100:11434
 # model = gemma3:27b
-# api_key = ...  (optional, for authenticated remote instances)
+# priority = 10
+# api_key = ...  (optional, for authenticated instances)
+
+# [ollama:server2]
+# url = http://192.168.1.101:11434
+# model = qwen3:14b
+# priority = 20
 
 [sort]
 # Default source and target directories for 'scanflow sort'
