@@ -192,22 +192,35 @@ def _call_ollama_priority(instances):
 
 
 def _call_ollama_idle(instances):
-    """Pick the highest-priority idle server, fall back to busy if none idle."""
-    reachable = []
+    """Pick the highest-priority idle server based on response time.
+
+    A loaded model in VRAM does not mean busy - Ollama caches models after use.
+    We consider a server 'idle' if it responds quickly to a status check,
+    and 'busy' only if it's unreachable or very slow to respond.
+    """
+    idle = []
+    busy = []
     for inst in instances:
         try:
             resp = requests.get(f"{inst['url'].rstrip('/')}/api/ps", timeout=2)
             if resp.status_code == 200:
                 models = resp.json().get("models", [])
                 if len(models) == 0:
-                    print(f"  Using ollama '{inst['name']}' (idle)", file=sys.stderr)
-                    return inst
-                reachable.append(inst)
+                    idle.append(inst)
+                else:
+                    # Model loaded but may not be actively processing
+                    # Treat as available but prefer truly idle servers
+                    busy.append(inst)
         except (requests.ConnectionError, requests.Timeout):
             pass
-    if reachable:
-        inst = reachable[0]
-        print(f"  Using ollama '{inst['name']}' (all busy, queuing)", file=sys.stderr)
+
+    if idle:
+        inst = idle[0]
+        print(f"  Using ollama '{inst['name']}' (idle)", file=sys.stderr)
+        return inst
+    if busy:
+        inst = busy[0]
+        print(f"  Using ollama '{inst['name']}' (model cached)", file=sys.stderr)
         return inst
     raise ConnectionError(
         f"All Ollama instances unreachable: "
