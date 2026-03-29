@@ -214,13 +214,13 @@ def _call_ollama_idle(instances):
         except (requests.ConnectionError, requests.Timeout):
             pass
 
-    if idle:
-        inst = idle[0]
-        print(f"  Using ollama '{inst['name']}' (idle)", file=sys.stderr)
-        return inst
     if busy:
         inst = busy[0]
         print(f"  Using ollama '{inst['name']}' (model cached)", file=sys.stderr)
+        return inst
+    if idle:
+        inst = idle[0]
+        print(f"  Using ollama '{inst['name']}' (idle)", file=sys.stderr)
         return inst
     raise ConnectionError(
         f"All Ollama instances unreachable: "
