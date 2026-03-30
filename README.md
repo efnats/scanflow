@@ -64,8 +64,11 @@ api_key = sk-ant-...
 [openai]
 api_key = sk-...
 
+# ollama_mode: idle (prefer idle/cached servers) or priority (strict order)
+# ollama_mode = idle
+
 # Ollama: multiple instances supported, tried by priority (lowest first)
-# Idle servers are preferred over busy ones automatically
+# Servers with a cached model are preferred over idle ones (faster response)
 [ollama:server1]
 url = http://192.168.1.100:11434
 model = gemma3:27b
