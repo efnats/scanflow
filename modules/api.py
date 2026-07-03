@@ -8,7 +8,7 @@ import requests
 
 
 DEFAULT_MODELS = {
-    "claude": "claude-sonnet-4-6-20250620",
+    "claude": "claude-sonnet-4-6",
     "openai": "gpt-4o",
     "ollama": None,
 }
